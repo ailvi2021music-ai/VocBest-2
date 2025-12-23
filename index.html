@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Words</title>
+
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+
+    body{
+      margin:0;
+      font-family:-apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      background:#0b0b0c;
+      color:#fff;
+      -webkit-text-size-adjust:100%;
+    }
+
+    /* NEW: центрируем карточку по экрану */
+    .page{
+      min-height: 100svh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 16px;
+    }
+
+    .wrap{
+      width:100%;
+      max-width:560px;
+    }
+
+    .card{
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:16px;
+      padding:16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .word{
+      font-size:30px;
+      font-weight:700;
+      letter-spacing:0.2px;
+      margin:10px 0 6px;
+      word-break: break-word;
+    }
+    .hint{ opacity:0.7; font-size:13px; }
+
+    .grid{ display:grid; gap:10px; margin-top:12px; }
+
+    .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.08);
+      color:#fff;
+      padding:12px 14px;
+      border-radius:14px;
+      font-size:16px;
+      width:100%;
+      text-align:left;
+      cursor:pointer;
+      user-select:none;
+      touch-action: manipulation;
+      word-break: break-word;
+    }
+    .btn:active{ transform:scale(0.99); }
+    .btn:disabled{ opacity:0.6; cursor:not-allowed; }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+
+    .smallbtn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.08);
+      color:#fff;
+      padding:10px 12px;
+      border-radius:12px;
+      font-size:14px;
+      cursor:pointer;
+      white-space:nowrap;
+      touch-action: manipulation;
+    }
+    .smallbtn:active{ transform:scale(0.99); }
+    .danger{ border-color: rgba(255,0,0,0.25); }
+
+    .msg{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      min-height:22px;
+      line-height:1.25;
+      font-size:14px;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .msg.ok{ border-color: rgba(0,255,0,0.25); }
+    .msg.bad{ border-color: rgba(255,0,0,0.25); }
+
+    details{ margin-top:16px; }
+    summary{ cursor:pointer; opacity:0.85; touch-action: manipulation; }
+
+    .taWrap{
+      margin-top:10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(0,0,0,0.25);
+      overflow:hidden;
+    }
+    textarea{
+      width:100%;
+      min-height:140px;
+      max-height:220px;
+      resize:vertical;
+      border:none;
+      background:transparent;
+      color:#fff;
+      padding:12px;
+      font-size:16px;
+      outline:none;
+      overflow:auto;
+      display:block;
+      margin:0;
+      -webkit-overflow-scrolling: touch;
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: manipulation;
+      white-space: pre;
+    }
+    textarea[readonly]{ opacity:0.9; }
+
+    code{ opacity:0.9; }
+  </style>
+</head>
+
+<body>
+<div class="page">
+  <div class="wrap">
+    <div class="card">
+
+      <div class="word" id="questionWord">—</div>
+      <div class="hint" id="hintText">Нажми «Новые слова» или добавь их в резерв</div>
+
+      <div class="grid" id="answers"></div>
+
+      <div class="msg" id="msgBox"></div>
+
+      <div class="row">
+        <button class="smallbtn" id="modeBtn">EN↔RU</button>
+        <button class="smallbtn" id="newBtn">Новые слова</button>
+        <button class="smallbtn" id="skipBtn">Пропустить</button>
+        <button class="smallbtn" id="repeatBtn">Повторить</button>
+      </div>
+
+      <details open>
+        <summary>Резерв <span id="vaultCountInline" style="opacity:0.7;">(0)</span></summary>
+        <div class="hint" style="margin-top:8px;">
+          Формат: <code>english - русский</code>, по одному на строку. Минимум 4 строки.
+          Дубли удаляются при сохранении. Любые символы (например <code>[ ]</code>) допустимы.
+        </div>
+
+        <div class="taWrap">
+          <textarea id="vaultTextarea"
+            spellcheck="false"
+            inputmode="text"
+            autocapitalize="none"
+            autocomplete="off"
+            autocorrect="off"></textarea>
+        </div>
+
+        <div class="row">
+          <button class="smallbtn" id="saveVaultBtn">Сохранить</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>Выучено <span id="learnedCountInline" style="opacity:0.7;">(0)</span></summary>
+
+        <div class="taWrap">
+          <textarea id="learnedTextarea" readonly></textarea>
+        </div>
+
+        <div class="row">
+          <button class="smallbtn danger" id="clearLearnedBtn">Очистить</button>
+        </div>
+      </details>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('./sw.js');
+        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              sw.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          location.reload();
+        });
+      } catch {}
+    });
+  }
+
+  const LS_ACTIVE  = 'vt_active_v7';
+  const LS_VAULT   = 'vt_vault_v7';
+  const LS_LEARNED = 'vt_learned_v7';
+  const LS_MODE    = 'vt_mode_v7';
+  const LS_ROUND   = 'vt_round_v7';
+  const LEGACY_WORDS = 'vt_words_v1';
+
+  const BATCH_SIZE = 10;
+
+  const DEFAULT_VAULT = [
+    { en: 'apple',  ru: 'яблоко' },
+    { en: 'window', ru: 'окно' },
+    { en: 'water',  ru: 'вода' },
+    { en: 'friend', ru: 'друг' },
+    { en: 'street', ru: 'улица' },
+    { en: 'time',   ru: 'время' },
+    { en: 'save',   ru: 'сохранить' },
+    { en: 'delete', ru: 'удалить' }
+  ];
+
+  let active  = loadPairs(LS_ACTIVE, []);
+  let vault   = loadPairs(LS_VAULT, []);
+  let learned = loadPairs(LS_LEARNED, []);
+  let mode    = loadMode();
+  let round   = loadRound();
+
+  if (vault.length < 4) {
+    const legacy = loadPairs(LEGACY_WORDS, []);
+    if (legacy.length >= 4) vault = legacy;
+  }
+  if (vault.length < 4) vault = [...DEFAULT_VAULT];
+
+  let deck = [];
+  let deckPos = 0;
+  let current = null;
+  let lockAnswers = false;
+
+  const elQuestion = document.getElementById('questionWord');
+  const elHint = document.getElementById('hintText');
+  const elAnswers = document.getElementById('answers');
+  const elMsg = document.getElementById('msgBox');
+
+  const taVault = document.getElementById('vaultTextarea');
+  const taLearned = document.getElementById('learnedTextarea');
+
+  const elVaultCountInline = document.getElementById('vaultCountInline');
+  const elLearnedCountInline = document.getElementById('learnedCountInline');
+
+  const btnMode = document.getElementById('modeBtn');
+  const btnNew = document.getElementById('newBtn');
+  const btnSkip = document.getElementById('skipBtn');
+  const btnRepeat = document.getElementById('repeatBtn');
+  const btnSaveVault = document.getElementById('saveVaultBtn');
+  const btnClearLearned = document.getElementById('clearLearnedBtn');
+
+  syncTextareas();
+  savePairs(LS_VAULT, vault);
+  savePairs(LS_ACTIVE, active);
+  savePairs(LS_LEARNED, learned);
+
+  startRound(true);
+  renderQuestion();
+
+  taVault.addEventListener('input', () => setMsg(''));
+
+  btnMode.addEventListener('click', () => {
+    mode = (mode === 'EN_RU') ? 'RU_EN' : 'EN_RU';
+    saveMode(mode);
+    setMsg('');
+    renderQuestion(true);
+  });
+
+  btnSaveVault.addEventListener('click', () => {
+    const raw = taVault.value || '';
+    const before = countNonEmptyLines(raw);
+
+    const parsed = parseLinesToPairs(raw);
+    if (parsed.error) return setMsg('Ошибка ❌ ' + parsed.error, 'bad');
+
+    vault = dedupePairs(parsed.items);
+    savePairs(LS_VAULT, vault);
+    syncTextareas();
+
+    const removed = Math.max(0, before - vault.length);
+    setMsg('Сохранено ✅ Удалено дублей: ' + removed, 'ok');
+  });
+
+  btnNew.addEventListener('click', () => {
+    if (vault.length < 4) return setMsg('В резерве меньше 4 — добавь ещё.', 'bad');
+
+    if (active.length) learned = dedupePairs([...learned, ...active]);
+
+    const shuffled = shuffle([...vault]);
+    active = shuffled.slice(0, Math.min(BATCH_SIZE, shuffled.length));
+    vault  = shuffled.slice(active.length);
+
+    savePairs(LS_ACTIVE, active);
+    savePairs(LS_VAULT, vault);
+    learned = dedupePairs(learned);
+    savePairs(LS_LEARNED, learned);
+
+    round = 1; saveRound(round);
+
+    syncTextareas();
+    startRound(false);
+    renderQuestion();
+    setMsg('Новые слова ✅ (' + active.length + ')', 'ok');
+  });
+
+  btnRepeat.addEventListener('click', () => {
+    if (learned.length < 4) return setMsg('В выученном меньше 4 — пока нечего повторять.', 'bad');
+
+    if (active.length) learned = dedupePairs([...learned, ...active]);
+
+    const shuffled = shuffle([...learned]);
+    active  = shuffled.slice(0, Math.min(BATCH_SIZE, shuffled.length));
+    learned = shuffled.slice(active.length);
+
+    savePairs(LS_ACTIVE, active);
+    savePairs(LS_LEARNED, learned);
+
+    round = 1; saveRound(round);
+
+    syncTextareas();
+    startRound(false);
+    renderQuestion();
+    setMsg('Повтор ✅ (' + active.length + ')', 'ok');
+  });
+
+  btnSkip.addEventListener('click', () => {
+    if (active.length < 4) return;
+    setMsg('Пропущено ➜ следующее');
+    setTimeout(() => goNext(), 200);
+  });
+
+  btnClearLearned.addEventListener('click', () => {
+    if (!confirm('Очистить выученное?')) return;
+    learned = [];
+    savePairs(LS_LEARNED, learned);
+    syncTextareas();
+    setMsg('Очищено ✅', 'ok');
+  });
+
+  function startRound(firstInit) {
+    if (active.length < 4) return;
+    deck = shuffle([...Array(active.length).keys()]);
+    deckPos = 0;
+    current = active[deck[deckPos]];
+    lockAnswers = false;
+  }
+
+  function renderQuestion(forceRerenderCurrent=false) {
+    if (active.length < 4) {
+      elQuestion.textContent = '—';
+      elHint.textContent = 'Нажми «Новые слова» или добавь их в резерв';
+      elAnswers.innerHTML = '';
+      updateCounts();
+      return;
+    }
+
+    if (!deck.length) startRound(true);
+    if (!current || !forceRerenderCurrent) current = active[deck[deckPos]];
+
+    const question = (mode === 'EN_RU') ? current.en : current.ru;
+    const correct  = (mode === 'EN_RU') ? current.ru : current.en;
+
+    elQuestion.textContent = question;
+    elHint.textContent = (mode === 'EN_RU') ? 'Выбери перевод на русском' : 'Выбери перевод на английском';
+
+    const wrongPool = active
+      .filter(w => w !== current)
+      .map(w => (mode === 'EN_RU') ? w.ru : w.en);
+
+    const wrongs = pickUnique(wrongPool, 3);
+    const options = shuffle([correct, ...wrongs]);
+
+    elAnswers.innerHTML = '';
+    lockAnswers = false;
+
+    options.forEach(opt => {
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = opt;
+      b.addEventListener('click', () => onAnswer(opt, correct));
+      elAnswers.appendChild(b);
+    });
+
+    updateCounts();
+    if (!forceRerenderCurrent) setMsg('');
+  }
+
+  function onAnswer(chosen, correct) {
+    if (lockAnswers) return;
+
+    if (chosen === correct) {
+      lockAnswers = true;
+      setMsg('Молодец ✅', 'ok');
+      disableAnswerButtons(true);
+      setTimeout(() => goNext(), 380);
+    } else {
+      setMsg('Неправильно ❌ Правильный: ' + correct, 'bad');
+    }
+  }
+
+  function goNext() {
+    disableAnswerButtons(false);
+    lockAnswers = false;
+
+    deckPos += 1;
+    if (deckPos >= deck.length) {
+      round += 1;
+      saveRound(round);
+      startRound(false);
+    } else {
+      current = active[deck[deckPos]];
+    }
+    renderQuestion();
+  }
+
+  function disableAnswerButtons(disabled) {
+    [...elAnswers.querySelectorAll('button')].forEach(b => b.disabled = disabled);
+  }
+
+  function setMsg(text, kind='') {
+    elMsg.textContent = text;
+    elMsg.classList.remove('ok','bad');
+    if (kind) elMsg.classList.add(kind);
+  }
+
+  function syncTextareas() {
+    taVault.value = vault.map(w => `${w.en} - ${w.ru}`).join('\n');
+    taLearned.value = learned.map(w => `${w.en} - ${w.ru}`).join('\n');
+    updateCounts();
+  }
+
+  function updateCounts() {
+    elVaultCountInline.textContent = '(' + (vault.length || 0) + ')';
+    elLearnedCountInline.textContent = '(' + (learned.length || 0) + ')';
+  }
+
+  function parseLinesToPairs(text) {
+    const lines = String(text).split('\n').map(s => s.trim()).filter(Boolean);
+    if (lines.length < 4) return { error: 'Нужно минимум 4 строки.', items: null };
+
+    const out = [];
+    for (const line of lines) {
+      const { left, right } = splitFirstDash(line);
+      if (!left || !right) return { error: `Неверный формат: "${line}"`, items: null };
+      out.push({ en: left, ru: right });
+    }
+    return { error: null, items: out };
+  }
+
+  function splitFirstDash(line) {
+    const idxHyphen = line.indexOf('-');
+    const idxEmDash = line.indexOf('—');
+
+    let idx = -1;
+    if (idxHyphen === -1) idx = idxEmDash;
+    else if (idxEmDash === -1) idx = idxHyphen;
+    else idx = Math.min(idxHyphen, idxEmDash);
+
+    if (idx === -1) return { left: '', right: '' };
+
+    const left = line.slice(0, idx).trim();
+    const right = line.slice(idx + 1).trim();
+    return { left, right };
+  }
+
+  function countNonEmptyLines(text) {
+    return String(text).split('\n').map(s => s.trim()).filter(Boolean).length;
+  }
+
+  function dedupePairs(items) {
+    const map = new Map();
+    for (const it of items) {
+      const en = String(it.en || '').trim();
+      const ru = String(it.ru || '').trim();
+      if (!en || !ru) continue;
+      const k = norm(en) + '||' + norm(ru);
+      if (!map.has(k)) map.set(k, { en, ru });
+    }
+    return [...map.values()];
+  }
+
+  function norm(s) {
+    return s.toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function pickUnique(pool, n) {
+    const uniq = [...new Set(pool)];
+    return shuffle(uniq).slice(0, n);
+  }
+
+  function loadPairs(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return fallback;
+      return arr
+        .filter(x => x && typeof x.en === 'string' && typeof x.ru === 'string')
+        .map(x => ({ en: x.en.trim(), ru: x.ru.trim() }))
+        .filter(x => x.en && x.ru);
+    } catch { return fallback; }
+  }
+  function savePairs(key, arr) { localStorage.setItem(key, JSON.stringify(arr)); }
+
+  function loadMode() {
+    const m = localStorage.getItem(LS_MODE);
+    return (m === 'RU_EN' || m === 'EN_RU') ? m : 'EN_RU';
+  }
+  function saveMode(m) { localStorage.setItem(LS_MODE, m); }
+
+  function loadRound() {
+    const r = parseInt(localStorage.getItem(LS_ROUND) || '1', 10);
+    return Number.isFinite(r) && r >= 1 ? r : 1;
+  }
+  function saveRound(r) { localStorage.setItem(LS_ROUND, String(r)); }
+})();
+</script>
+</body>
+</html>
